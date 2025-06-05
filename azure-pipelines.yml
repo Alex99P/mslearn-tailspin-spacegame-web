@@ -1,3 +1,44 @@
-# pool: MyAgentPool
+trigger:
+- '*'
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  buildConfiguration: 'Release'
+
 steps:
-- bash: echo hello world
+- task: UseDotNet@2 # Use .NET SDK
+  displayName: 'Use .NET SDK 6.x'
+  inputs:
+    packageType: sdk
+    version: '6.x'
+
+- task: Npm@1 # Install Node.js
+  displayName: 'Run npm install'
+  inputs:
+    verbose: false
+
+    # Install Node.js version
+- script: './node_modules/.bin/node-sass Tailspin.SpaceGame.Web/wwwroot --output Tailspin.SpaceGame.Web/wwwroot'
+  displayName: 'Compile Sass assets'
+
+- task: gulp@1 # Run gulp tasks
+  displayName: 'Run gulp tasks'
+
+- script: 'echo "$(Build.DefinitionName), $(Build.BuildId), $(Build.BuildNumber)" > buildinfo.txt' # Write build info
+  displayName: 'Write build info' 
+  workingDirectory: Tailspin.SpaceGame.Web/wwwroot
+
+- task: DotNetCoreCLI@2 # Restore .NET project dependencies
+  displayName: 'Restore project dependencies' 
+  inputs: 
+    command: 'restore'
+    projects: '**/*.csproj'
+
+- task: DotNetCoreCLI@2 # Build the project in Release configuration
+  displayName: 'Build the project - Release'
+  inputs:
+    command: 'build'
+    arguments: '--no-restore --configuration Release'
+    projects: '**/*.csproj'
